@@ -1,11 +1,13 @@
 import pandas as pd
 import numpy as np
+import itertools
+import random
 
 data = pd.read_csv("Elo_System_Matrix.csv")
 data = data.drop("Unnamed: 0", axis = 1)
 
 #Defining Elo Boundaries
-k = 30
+k = 10
 elo_start = 1500
 
 #Create a correlation matrix of winning/losing 
@@ -27,8 +29,8 @@ players = np.array(list(zip(names, startratings)))
 def getExpectedScore(Ra, Rb, games):
     score = 0
     for i in range(games):
-        score = score + 1/(1 + 10**((Rb - Ra)/400))
-    return score
+        score = float(score) + float(1/(1 + 10**((Rb - Ra)/400)))
+    return float(score)
 
 #Finds Player given Player Name
 def findPlayer(playername):
@@ -52,21 +54,55 @@ def getElo(player1, player2, wins, losses):
     
 
     #print (str(Ra) + ", " + str(Rb) + ", " + str(expectedP1) + ", " + str(expectedP2))
-    newScoreP1 = round(Ra + k*(actualscoreP1 - expectedP1),2)
-    newScoreP2 = round(Ra + k*(actualscoreP2 - expectedP2),2)
+    newScoreP1 = Ra + k*(actualscoreP1 - float(expectedP1))
+    newScoreP2 = Rb + k*(actualscoreP2 - float(expectedP2))
 
     #print (str(newScoreP1) + ", " + str(newScoreP2))
     players[player1index][1] = newScoreP1
     players[player2index][1] = newScoreP2
 
-    print ("The new Elo for " + str(players[player1index][0]) + " is: " + str(newScoreP1))
-    print ("The new Elo for " + str(players[player2index][0]) + " is: " + str(newScoreP2))
+    #print ("The new Elo for " + str(players[player1index][0]) + " is: " + str(newScoreP1))
+    #print ("The new Elo for " + str(players[player2index][0]) + " is: " + str(newScoreP2))
 
+#Get Total Sum of all ratings --> This is used to normalize as a Elo
+#System is a zero-sum game
+def getSum():
+    sum = 0
+    for x in players:
+        sum = sum + float(x[1])
+    return sum
 
+#normalizes data so all elo's average to 1500
+def normalize():
+    sum = getSum()
+    if float(sum/14) < elo_start:
+        standard_diff = elo_start - float(sum/14)
 
-getElo("Mesh", "Trot", 10, 10)
-getElo("LP", "Mesh", 17, 4)
+    for i in range(len(players)):
+        players[i][1] = float(players[i][1]) + float(standard_diff)
 
+#simulates a Runthrough
+def simulateGames(n):
+    j = int(n/10)
+    combinations = np.array(list(itertools.combinations(names, 2)))
+    for b in range(j):
+        for x in combinations:
+            wins = 0
+            losses = 0
+            winfactor = matrix[x[0]].ix[findPlayer(x[1])]
+            for l in range(10):
+                if random.random() > winfactor:
+                    wins += 1
+                else:
+                    losses += 1
+            getElo(x[0],x[1], wins, losses)
+        
+        normalize()
+
+        
+
+simulateGames(10000)
+print (players)
 
 
 
